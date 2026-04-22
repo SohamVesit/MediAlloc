@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hospital RL — Resource Allocation</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-left">
+      <span class="logo-icon">🏥</span>
+      <div>
+        <h1>HospitalRL</h1>
+        <p class="subtitle">Q-Learning Resource Allocation System</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="status-pill" id="status-pill">● IDLE</div>
+      <div class="epsilon-display">ε = <span id="epsilon-val">0.00</span></div>
+    </div>
+  </header>
+
+  <!-- MAIN LAYOUT -->
+  <main>
+
+    <!-- LEFT COLUMN: Resources + Controls -->
+    <section class="left-col">
+
+      <!-- Resource Cards -->
+      <div class="section-label">LIVE RESOURCES</div>
+      <div class="resource-grid">
+
+        <div class="resource-card" id="card-icu">
+          <div class="res-icon">🛏️</div>
+          <div class="res-info">
+            <div class="res-name">ICU Beds</div>
+            <div class="res-bar-wrap">
+              <div class="res-bar" id="bar-icu"></div>
+            </div>
+            <div class="res-val"><span id="val-icu">10</span> / 10</div>
+          </div>
+        </div>
+
+        <div class="resource-card" id="card-gen">
+          <div class="res-icon">🏨</div>
+          <div class="res-info">
+            <div class="res-name">General Beds</div>
+            <div class="res-bar-wrap">
+              <div class="res-bar" id="bar-gen"></div>
+            </div>
+            <div class="res-val"><span id="val-gen">20</span> / 20</div>
+          </div>
+        </div>
+
+        <div class="resource-card" id="card-doc">
+          <div class="res-icon">👨‍⚕️</div>
+          <div class="res-info">
+            <div class="res-name">Doctors</div>
+            <div class="res-bar-wrap">
+              <div class="res-bar" id="bar-doc"></div>
+            </div>
+            <div class="res-val"><span id="val-doc">8</span> / 8</div>
+          </div>
+        </div>
+
+        <div class="resource-card" id="card-amb">
+          <div class="res-icon">🚑</div>
+          <div class="res-info">
+            <div class="res-name">Ambulances</div>
+            <div class="res-bar-wrap">
+              <div class="res-bar" id="bar-amb"></div>
+            </div>
+            <div class="res-val"><span id="val-amb">5</span> / 5</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Patient Queue -->
+      <div class="section-label" style="margin-top:28px">PATIENT QUEUE</div>
+      <div class="patient-grid">
+        <div class="patient-card critical">
+          <div class="sev-dot"></div>
+          <div>
+            <div class="sev-label">CRITICAL</div>
+            <div class="sev-count" id="p-critical">0</div>
+          </div>
+        </div>
+        <div class="patient-card moderate">
+          <div class="sev-dot"></div>
+          <div>
+            <div class="sev-label">MODERATE</div>
+            <div class="sev-count" id="p-moderate">0</div>
+          </div>
+        </div>
+        <div class="patient-card mild">
+          <div class="sev-dot"></div>
+          <div>
+            <div class="sev-label">MILD</div>
+            <div class="sev-count" id="p-mild">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="section-label" style="margin-top:28px">SIMULATION CONTROLS</div>
+      <div class="controls">
+        <button id="btn-start" class="btn btn-primary" onclick="startEpisode()">▶ Start Episode</button>
+        <button id="btn-step"  class="btn btn-secondary" onclick="stepOnce()" disabled>⏭ Step</button>
+        <button id="btn-auto"  class="btn btn-secondary" onclick="toggleAuto()" disabled>⚡ Auto Run</button>
+        <button id="btn-reset" class="btn btn-danger"    onclick="resetSim()">↺ Reset</button>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-row" style="margin-top:20px">
+        <div class="stat-box">
+          <div class="stat-label">Timestep</div>
+          <div class="stat-val" id="stat-step">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Total Reward</div>
+          <div class="stat-val reward-val" id="stat-reward">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Treated</div>
+          <div class="stat-val green-val" id="stat-treated">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Deaths</div>
+          <div class="stat-val red-val" id="stat-died">0</div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- RIGHT COLUMN: Charts + Event Log -->
+    <section class="right-col">
+
+      <!-- Last Action Banner -->
+      <div class="action-banner" id="action-banner">
+        🤖 Agent is ready — press Start Episode
+      </div>
+
+      <!-- Charts -->
+      <div class="chart-grid">
+        <div class="chart-box">
+          <div class="chart-title">Reward per Step</div>
+          <canvas id="chart-reward" height="140"></canvas>
+        </div>
+        <div class="chart-box">
+          <div class="chart-title">Patients Treated (cumulative)</div>
+          <canvas id="chart-treated" height="140"></canvas>
+        </div>
+      </div>
+
+      <!-- Training Curve -->
+      <div class="chart-box" style="margin-top:16px">
+        <div class="chart-title">Training History — Reward per Episode
+          <button class="small-btn" onclick="loadTrainingStats()">Load</button>
+        </div>
+        <canvas id="chart-training" height="130"></canvas>
+      </div>
+
+      <!-- Event Log -->
+      <div class="section-label" style="margin-top:24px">EVENT LOG</div>
+      <div class="event-log" id="event-log">
+        <div class="log-entry log-info">System initialized. Press Start Episode.</div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
